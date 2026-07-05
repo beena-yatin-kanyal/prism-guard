@@ -1,0 +1,115 @@
+# =============================================================================
+# Prism Guard — .gitignore
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Maven
+# -----------------------------------------------------------------------------
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# -----------------------------------------------------------------------------
+# Java
+# -----------------------------------------------------------------------------
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# -----------------------------------------------------------------------------
+# IntelliJ IDEA
+# Keep: .idea/runConfigurations/ (shared launch configs)
+#       .idea/codeStyles/        (shared code style)
+#       .idea/inspectionProfiles/(shared inspection config)
+# -----------------------------------------------------------------------------
+.idea/
+!.idea/runConfigurations/
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+*.iml
+*.ipr
+*.iws
+out/
+
+# -----------------------------------------------------------------------------
+# Prism Guard — generated reports
+# -----------------------------------------------------------------------------
+prismguard-reports/
+prismguard-report*.html
+# Keep the example config template checked in
+!prismguard-example.yml
+
+# -----------------------------------------------------------------------------
+# Test output & coverage
+# -----------------------------------------------------------------------------
+surefire-reports/
+failsafe-reports/
+*.exec
+jacoco.xml
+jacoco/
+coverage/
+coverage-reports/
+
+# -----------------------------------------------------------------------------
+# OS-specific
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# Temporary / editor swap files
+# -----------------------------------------------------------------------------
+*.swp
+*.swo
+*.bak
+*.tmp
+*.orig
+*.rej
+\#*\#
+.#*
+
+# -----------------------------------------------------------------------------
+# Cache directories
+# -----------------------------------------------------------------------------
+.cache/
+.gradle/
+.kotlin/
+build/
+
+# -----------------------------------------------------------------------------
+# Profiling & heap dumps
+# -----------------------------------------------------------------------------
+*.hprof
+*.jfr
+*.prof
+
+prismguard.yml
+

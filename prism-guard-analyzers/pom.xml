@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.prismguard</groupId>
+        <artifactId>prism-guard-parent</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>prism-guard-analyzers</artifactId>
+    <packaging>jar</packaging>
+    <name>Prism Guard - Analyzers</name>
+    <description>All built-in analysis capabilities for Prism Guard. Rules are defined externally
+        in prismguard.yml; these classes provide the generic detection logic that backs them.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.prismguard</groupId>
+            <artifactId>prism-guard-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.prismguard</groupId>
+            <artifactId>prism-guard-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.javaparser</groupId>
+            <artifactId>javaparser-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>io.prismguard</groupId>
+                            <artifactId>prism-guard-core</artifactId>
+                            <version>${project.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

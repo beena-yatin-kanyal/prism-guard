@@ -1,0 +1,751 @@
+# =============================================================================
+# prismguard.yml — Prism Guard Configuration
+# =============================================================================
+# Copy this file to the root of your repository and customize it.
+# Run: prism-guard analyze /path/to/your/project
+#
+# Prism Guard reads this file before every analysis run. No recompilation needed.
+# =============================================================================
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ANALYZER ARCHITECTURE
+# Each rule entry references a reusable analyzer via the `analyzer:` key.
+# The same analyzer can power multiple rules — just duplicate the block with a
+# new rule ID, different parameters, and a different title/severity.
+# The Prism Guard JAR never needs to change to add new rule variants.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Directories to scan relative to the project root.
+# Defaults to [ "src/main/java" ] if omitted.
+sourceDirectories:
+  - src/main/java
+
+# Glob patterns for files/directories to exclude from scanning.
+excludePatterns:
+  - "**/generated/**"
+  - "**/target/**"
+  - "**/*Test.java"
+  - "**/*IT.java"
+
+# Java language version used to parse source files.
+# Accepted values: 8, 11, 14, 15, 16, 17, 18, 19, 20, 21
+# Defaults to 21 if omitted. Set this to match your project's java.version in pom.xml.
+javaVersion: 21
+
+# Output format: html
+outputFormat: html
+
+# Directory where reports are written.
+# Defaults to <project>/prismguard-reports if omitted.
+outputDirectory: ./prismguard-reports
+
+# Exit with code 1 if any CRITICAL findings are produced.
+failOnCritical: false
+
+# Exit with code 1 if the overall score drops below this value (0 = disabled).
+failOnScoreBelow: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SCORING (optional)
+# Override the default penalty model. Omit this section to use the defaults:
+#   CRITICAL: -15 per finding, capped at -45
+#   HIGH:      -8 per finding, capped at -32
+#   MEDIUM:    -3 per finding, capped at -15
+#   LOW:       -1 per finding, capped at  -5
+# ─────────────────────────────────────────────────────────────────────────────
+#scoring:
+#  critical:
+#    penalty: 15
+#    cap: 45
+#  high:
+#    penalty: 8
+#    cap: 32
+#  medium:
+#    penalty: 3
+#    cap: 15
+#  low:
+#    penalty: 1
+#    cap: 5
+
+# Restrict analysis to these categories only (omit to run all categories).
+# Valid values: ARCHITECTURE, SPRING_BOOT, JAVA_QUALITY, SECURITY, PERFORMANCE,
+#               MAINTAINABILITY, SOLID, CLEAN_ARCHITECTURE, JPA_HIBERNATE,
+#               TRANSACTION, REST_API, MICROSERVICES, CONFIGURATION,
+#               OBSERVABILITY, DEPENDENCY_INJECTION
+#enabledCategories:
+#  - JAVA_QUALITY
+#  - SPRING_BOOT
+
+# Disable specific rules by ID (alternative to setting enabled: false on each rule).
+#disabledRules:
+#  - JAVA009
+#  - ARCH006
+
+# =============================================================================
+# Rule definitions
+# Each key is the rule ID. All fields are optional — omitting a field means
+# the rule uses code defaults. The `analyzer:` field is required.
+# =============================================================================
+rules:
+
+  JAVA001:
+    analyzer: public-field
+    title: "Public Field"
+    description: "Detects non-static, non-final public fields that break encapsulation."
+    rationale: "Public fields expose internal state directly, making refactoring harder and violating encapsulation."
+    severity: MEDIUM
+    category: JAVA_QUALITY
+    tags: [encapsulation, design]
+    enabled: true
+    recommendation: "Make fields private and provide accessors where needed."
+
+  JAVA002:
+    analyzer: long-method
+    title: "Long Method"
+    description: "Detects methods that are excessively long and likely doing too much."
+    rationale: "Long methods are harder to understand, test, and modify."
+    severity: MEDIUM
+    category: JAVA_QUALITY
+    tags: [long-method, complexity, maintainability]
+    enabled: true
+    recommendation: "Extract smaller methods. Each method should do one thing."
+    parameters:
+      maxLines: 50
+
+  JAVA003:
+    analyzer: high-cyclomatic-complexity
+    title: "High Cyclomatic Complexity"
+    description: "Detects methods with excessively high cyclomatic complexity."
+    rationale: "High complexity means more paths, harder to test and understand."
+    severity: HIGH
+    category: JAVA_QUALITY
+    tags: [complexity, cyclomatic, maintainability]
+    enabled: true
+    recommendation: "Reduce complexity by extracting helper methods or using polymorphism."
+    parameters:
+      maxComplexity: 10
+
+  JAVA004:
+    analyzer: empty-exception-handling
+    title: "Swallowed Exception"
+    description: "Detects catch blocks that silently swallow exceptions."
+    rationale: "Silent exception handling hides failures and makes debugging extremely difficult."
+    severity: HIGH
+    category: JAVA_QUALITY
+    tags: [exceptions, error-handling]
+    enabled: true
+    recommendation: "Log the exception, rethrow it, or handle it meaningfully."
+
+  JAVA005:
+    analyzer: utility-class-design
+    title: "Utility Class Missing Private Constructor"
+    description: "Detects utility classes that can be instantiated."
+    rationale: "Utility classes with only static methods should not be instantiable."
+    severity: LOW
+    category: JAVA_QUALITY
+    tags: [design, utility]
+    enabled: true
+    recommendation: "Add a private no-arg constructor to prevent instantiation."
+
+  JAVA006:
+    analyzer: mutable-static-field
+    title: "Mutable Static Field"
+    description: "Detects non-final static fields that can be mutated at runtime."
+    rationale: "Mutable static state is a source of race conditions and hard-to-trace bugs."
+    severity: MEDIUM
+    category: JAVA_QUALITY
+    tags: [concurrency, static-state]
+    enabled: true
+    recommendation: "Use final, AtomicXxx, or avoid static mutable state."
+
+  JAVA007:
+    analyzer: final-class-public-constructor
+    title: "Final Class with Public Constructor"
+    description: "Detects final classes that expose a public constructor unnecessarily."
+    severity: LOW
+    category: JAVA_QUALITY
+    enabled: true
+    recommendation: "Use a static factory method or make the constructor package-private."
+
+  JAVA008:
+    analyzer: primitive-obsession
+    title: "Primitive Obsession"
+    description: "Detects methods with too many primitive parameters that belong together."
+    severity: LOW
+    category: JAVA_QUALITY
+    tags: [design, value-objects]
+    enabled: true
+    recommendation: "Introduce a value object to group related primitive parameters."
+    parameters:
+      minTotalParams: 4
+      minPrimitiveParams: 3
+
+  JAVA009:
+    analyzer: magic-number
+    title: "Magic Number"
+    description: "Detects numeric literals used directly in code instead of named constants."
+    severity: INFO
+    category: JAVA_QUALITY
+    tags: [readability, constants]
+    enabled: true
+    recommendation: "Replace magic numbers with named constants."
+
+  JAVA010:
+    analyzer: god-class
+    title: "God Class"
+    description: "Detects classes that have grown too large and take on too many responsibilities."
+    rationale: "God classes violate SRP and become maintenance nightmares."
+    severity: HIGH
+    category: JAVA_QUALITY
+    tags: [god-class, srp, complexity, maintainability]
+    enabled: true
+    recommendation: "Break this class into smaller, focused classes following SRP."
+    parameters:
+      maxPublicMethods: 20
+      maxLines: 500
+      maxInstanceFields: 15
+
+  SPRING001:
+    analyzer: field-injection
+    title: "Field Injection Detected"
+    description: "Detects Spring beans using @Autowired on fields instead of constructors."
+    severity: HIGH
+    category: DEPENDENCY_INJECTION
+    tags: [spring, di, testability]
+    enabled: true
+    recommendation: "Use constructor injection instead of field injection."
+
+  SPRING002:
+    analyzer: missing-transactional
+    title: "Service Method Missing @Transactional"
+    description: "Detects service methods that perform database writes without @Transactional."
+    severity: MEDIUM
+    category: TRANSACTION
+    enabled: true
+    recommendation: "Add @Transactional to ensure atomicity."
+
+  SPRING003:
+    analyzer: controller-business-logic
+    title: "Business Logic in Controller"
+    description: "Detects controllers that contain substantial business logic."
+    severity: HIGH
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Delegate all business logic to a @Service layer."
+    parameters:
+      maxMethodLines: 30
+      maxComplexity: 5
+
+  SPRING004:
+    analyzer: repository-in-service
+    title: "Direct Repository Access in Controller"
+    description: "Detects controllers that inject and call repositories directly."
+    severity: HIGH
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Access data only through the service layer."
+
+  SPRING005:
+    analyzer: component-scan-broad
+    title: "Overly Broad @ComponentScan"
+    description: "Detects @ComponentScan declarations that scan too broadly."
+    severity: MEDIUM
+    category: SPRING_BOOT
+    enabled: true
+    recommendation: "Specify basePackages to limit component scanning scope."
+
+  SPRING006:
+    analyzer: missing-request-mapping-validation
+    title: "Missing Input Validation"
+    description: "Detects @RequestBody parameters not annotated with @Valid."
+    severity: MEDIUM
+    category: REST_API
+    enabled: true
+    recommendation: "Add @Valid on @RequestBody parameters."
+
+  SPRING007:
+    analyzer: missing-error-handler
+    title: "No Global Exception Handler"
+    description: "Detects Spring Boot applications without a @RestControllerAdvice."
+    severity: MEDIUM
+    category: REST_API
+    enabled: true
+    recommendation: "Create a @RestControllerAdvice for centralized error handling."
+
+  SPRING008:
+    analyzer: excessive-autowiring
+    title: "Excessive Dependencies"
+    description: "Detects classes with too many injected dependencies."
+    severity: MEDIUM
+    category: DEPENDENCY_INJECTION
+    enabled: true
+    recommendation: "Decompose the class or group related dependencies."
+    parameters:
+      maxInjectedDeps: 7
+
+  SPRING009:
+    analyzer: transactional-on-private-method
+    title: "@Transactional on Private Method"
+    description: "Detects @Transactional placed on private methods where it has no effect."
+    severity: HIGH
+    category: TRANSACTION
+    enabled: true
+    recommendation: "Make the method public or move @Transactional to a public method."
+
+  SPRING010:
+    analyzer: hardcoded-credentials
+    title: "Hardcoded Credentials"
+    description: "Detects passwords, tokens, or API keys hardcoded in source files."
+    severity: CRITICAL
+    category: SECURITY
+    enabled: true
+    recommendation: "Externalize secrets to environment variables or a secrets manager."
+
+  SPRING011:
+    analyzer: spring-boot-actuator-missing
+    title: "Missing Actuator (Observability)"
+    description: "Detects Spring Boot applications without spring-boot-starter-actuator."
+    severity: LOW
+    category: OBSERVABILITY
+    enabled: true
+    recommendation: "Add spring-boot-starter-actuator for health and metrics endpoints."
+
+  SPRING012:
+    analyzer: deprecated-spring-pattern
+    title: "Deprecated Spring Pattern"
+    description: "Detects usage of Spring APIs or patterns that have been superseded."
+    severity: MEDIUM
+    category: SPRING_BOOT
+    enabled: true
+    recommendation: "Migrate to the modern Spring equivalent."
+
+  JPA001:
+    analyzer: entity-missing-generated-value
+    title: "Entity Missing @GeneratedValue"
+    description: "Detects @Entity classes whose @Id field lacks a @GeneratedValue strategy."
+    rationale: "Without a generation strategy the application must assign primary keys manually, which is error-prone."
+    severity: HIGH
+    category: JPA_HIBERNATE
+    enabled: true
+    recommendation: "Add @GeneratedValue(strategy = GenerationType.IDENTITY) or another strategy."
+
+  JPA002:
+    analyzer: entity-missing-equals-hashcode
+    title: "Entity Missing equals/hashCode"
+    description: "Detects @Entity classes that do not override equals() and hashCode()."
+    rationale: "Without these overrides, Hibernate Sets and second-level caches rely on object identity, causing subtle bugs."
+    severity: HIGH
+    category: JPA_HIBERNATE
+    enabled: true
+    recommendation: "Override equals() and hashCode() based on the entity's primary key."
+
+  JPA003:
+    analyzer: entity-public-field
+    title: "Public Field in Entity"
+    description: "Detects @Entity classes with non-private, non-static fields."
+    rationale: "Public fields bypass Hibernate's proxy and dirty-checking mechanisms."
+    severity: MEDIUM
+    category: JPA_HIBERNATE
+    enabled: true
+    recommendation: "Make fields private and provide getters/setters where needed."
+
+  JPA004:
+    analyzer: transactional-on-entity
+    title: "@Transactional on Entity"
+    description: "Detects @Entity classes also annotated with @Transactional."
+    rationale: "JPA entities are not Spring beans; @Transactional is silently ignored on them."
+    severity: HIGH
+    category: TRANSACTION
+    enabled: true
+    recommendation: "Remove @Transactional from the entity and place it on @Service or @Repository classes."
+
+  JPA005:
+    analyzer: entity-not-serializable
+    title: "Entity Not Serializable"
+    description: "Detects @Entity classes that do not implement java.io.Serializable."
+    rationale: "Required for second-level caching, distributed sessions, and JVM boundary crossing."
+    severity: LOW
+    category: JPA_HIBERNATE
+    enabled: true
+    recommendation: "Implement java.io.Serializable and add a serialVersionUID field."
+
+  JPA006:
+    analyzer: one-to-many-without-batch-size
+    title: "Collection Without Batch-Fetch Strategy"
+    description: "Detects @OneToMany or @ManyToMany fields without @BatchSize or @Fetch."
+    rationale: "Without batch fetching, each lazy collection load issues a separate SQL query (N+1 problem)."
+    severity: MEDIUM
+    category: PERFORMANCE
+    enabled: true
+    recommendation: "Add @BatchSize(size = 20) or @Fetch(FetchMode.SUBSELECT) to mitigate N+1 queries."
+
+  SOLID001:
+    analyzer: single-responsibility
+    title: "Single Responsibility Principle Violation"
+    description: "Detects classes that appear to have more than one responsibility."
+    severity: HIGH
+    category: SOLID
+    enabled: true
+    recommendation: "Decompose this class into focused classes, each with one responsibility."
+    parameters:
+      concernThreshold: 4
+      methodCountThreshold: 10
+
+  SOLID002:
+    analyzer: open-closed-principle
+    title: "Open/Closed Principle Violation"
+    description: "Detects large instanceof chains that require modification for each new type."
+    severity: MEDIUM
+    category: SOLID
+    enabled: true
+    recommendation: "Use the Strategy or Visitor pattern to eliminate instanceof chains."
+    parameters:
+      instanceofThreshold: 3
+
+  SOLID003:
+    analyzer: liskov-substitution
+    title: "Liskov Substitution Principle Violation"
+    description: "Detects subclasses that weaken contracts by throwing or overriding unexpectedly."
+    severity: MEDIUM
+    category: SOLID
+    enabled: true
+    recommendation: "Subclasses must be substitutable for their base type."
+
+  SOLID004:
+    analyzer: interface-segregation
+    title: "Interface Segregation Principle Violation"
+    description: "Detects interfaces that are too large and force implementors to provide unused methods."
+    severity: MEDIUM
+    category: SOLID
+    enabled: true
+    recommendation: "Split large interfaces into cohesive, role-specific interfaces."
+    parameters:
+      fatInterfaceThreshold: 10
+
+  SOLID005:
+    analyzer: dependency-inversion
+    title: "Dependency Inversion Principle Violation"
+    description: "Detects high-level components that depend directly on concrete low-level classes."
+    severity: HIGH
+    category: SOLID
+    enabled: true
+    recommendation: "Depend on abstractions, not concrete implementations."
+
+  ARCH001:
+    analyzer: layering-violation
+    title: "Layering Violation"
+    description: "Detects direct dependencies between layers that should be isolated."
+    severity: HIGH
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Remove cross-layer dependencies; use interfaces or events for communication."
+
+  ARCH002:
+    analyzer: circular-dependency
+    title: "Circular Dependency"
+    description: "Detects packages that form dependency cycles."
+    severity: CRITICAL
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Break the cycle by introducing an abstraction or restructuring packages."
+    parameters:
+      packageDepth: 3
+
+  ARCH003:
+    analyzer: god-package
+    title: "God Package"
+    description: "Detects packages that contain an excessive number of classes."
+    severity: MEDIUM
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Break large packages into feature-based or responsibility-based sub-packages."
+    parameters:
+      godPackageThreshold: 30
+
+  ARCH004:
+    analyzer: presentation-layer-returning-domain
+    title: "Domain Entity Leaked to Presentation Layer"
+    description: "Detects controllers that return JPA entities directly instead of DTOs."
+    severity: HIGH
+    category: CLEAN_ARCHITECTURE
+    enabled: true
+    recommendation: "Map entities to DTOs before returning them from controllers."
+
+  ARCH005:
+    analyzer: feature-envy
+    title: "Feature Envy"
+    description: "Detects methods that call other classes far more than their own class."
+    severity: MEDIUM
+    category: MAINTAINABILITY
+    enabled: true
+    recommendation: "Consider moving this method to the class it is most interested in."
+    parameters:
+      externalCallThreshold: 5
+      externalToSelfRatio: 2
+
+  ARCH006:
+    analyzer: naming-convention
+    title: "Naming Convention Violation"
+    description: "Detects Spring stereotype classes whose names do not follow conventions."
+    severity: LOW
+    category: ARCHITECTURE
+    enabled: true
+    recommendation: "Follow consistent naming conventions for Spring stereotypes."
+
+  ARCH007:
+    analyzer: util-class-in-domain
+    title: "Utility Class in Domain Layer"
+    description: "Detects utility or helper classes placed inside domain packages."
+    severity: LOW
+    category: CLEAN_ARCHITECTURE
+    enabled: true
+    recommendation: "Move utility classes to a dedicated utility package."
+
+  # ---------------------------------------------------------------------------
+  # Java Quality — extended rules
+  # ---------------------------------------------------------------------------
+
+  JAVA011:
+    analyzer: excessive-method-parameters
+    title: "Excessive Method Parameters"
+    description: "Detects methods with more parameters than the configured threshold."
+    rationale: "Methods with many parameters are hard to call, understand, and test. They often indicate that a parameter object should be introduced."
+    severity: MEDIUM
+    category: JAVA_QUALITY
+    tags: [design, parameter-object, maintainability]
+    enabled: true
+    recommendation: "Introduce a dedicated parameter object (value object or record) to group related parameters."
+    parameters:
+      maxParams: 7
+
+  JAVA012:
+    analyzer: abstract-class-no-abstract-methods
+    title: "Abstract Class With No Abstract Methods"
+    description: "Detects abstract classes that declare no abstract methods and therefore cannot enforce any contract."
+    rationale: "An abstract class with no abstract methods cannot dictate what subclasses must implement; it is essentially a concrete class that happens to be non-instantiable."
+    severity: LOW
+    category: JAVA_QUALITY
+    tags: [design, abstraction]
+    enabled: true
+    recommendation: "Declare at least one abstract method, make the class concrete, or convert it to an interface with default methods."
+
+  JAVA013:
+    analyzer: test-class-no-tests
+    title: "Test Class Without Tests"
+    description: "Detects classes whose name ends in Test/Tests/Spec/IT but that contain no @Test methods."
+    rationale: "Empty test classes provide no coverage and may mislead developers about test completeness."
+    severity: LOW
+    category: JAVA_QUALITY
+    tags: [testing, coverage]
+    enabled: true
+    recommendation: "Add @Test methods or remove the class if it is unused."
+
+  JAVA014:
+    analyzer: serializable-without-serial-version-uid
+    title: "Serializable Without serialVersionUID"
+    description: "Detects non-entity classes implementing Serializable without a serialVersionUID field."
+    rationale: "Without an explicit serialVersionUID the JVM computes one based on the class structure. Any refactoring changes it, causing InvalidClassException on deserialization."
+    severity: MEDIUM
+    category: JAVA_QUALITY
+    tags: [serialization, compatibility]
+    enabled: true
+    recommendation: "Add 'private static final long serialVersionUID = 1L;' to stabilize the serial form."
+
+  JAVA015:
+    analyzer: overloaded-method-excess
+    title: "Excessive Method Overloading"
+    description: "Detects classes where a single method name is overloaded more than the configured limit."
+    rationale: "Too many overloads inflate the public API surface, confuse callers, and often indicate a missing builder or configuration object."
+    severity: LOW
+    category: MAINTAINABILITY
+    tags: [design, api-design, overloading]
+    enabled: true
+    recommendation: "Replace excessive overloads with a builder pattern or a configuration parameter object."
+    parameters:
+      maxOverloads: 4
+
+  # ---------------------------------------------------------------------------
+  # Spring Boot — extended rules
+  # ---------------------------------------------------------------------------
+
+  SPRING013:
+    analyzer: async-method-not-public
+    title: "@Async on Non-Public Method"
+    description: "Detects @Async annotations on private or package-private methods in Spring beans."
+    rationale: "Spring's proxy-based AOP cannot intercept non-public methods. @Async on such methods is silently ignored and the method executes synchronously."
+    severity: HIGH
+    category: SPRING_BOOT
+    tags: [spring, async, proxy, aop]
+    enabled: true
+    recommendation: "Make the @Async method public and call it from a different Spring bean to ensure the proxy intercepts the call."
+
+  SPRING014:
+    analyzer: configuration-properties-no-validation
+    title: "@ConfigurationProperties Without @Validated"
+    description: "Detects @ConfigurationProperties classes not annotated with @Validated."
+    rationale: "Without @Validated, Bean Validation constraints on configuration fields are silently skipped and the application can start with invalid configuration."
+    severity: MEDIUM
+    category: CONFIGURATION
+    tags: [spring, configuration, validation, fail-fast]
+    enabled: true
+    recommendation: "Add @Validated to the class so constraint violations are caught at startup."
+
+  SPRING015:
+    analyzer: rest-endpoint-returns-void
+    title: "REST Endpoint Returns Void"
+    description: "Detects @RestController endpoint methods that return void."
+    rationale: "Void return type gives the framework no HTTP status information; it defaults to 200 even for DELETE or async operations."
+    severity: MEDIUM
+    category: REST_API
+    tags: [spring, rest, http-status, response-entity]
+    enabled: true
+    recommendation: "Return ResponseEntity<Void> to set the correct HTTP status code (e.g., 204 No Content)."
+
+  SPRING016:
+    analyzer: bean-method-not-in-configuration
+    title: "@Bean Method Not in @Configuration Class"
+    description: "Detects @Bean factory methods declared in classes not annotated with @Configuration."
+    rationale: "In 'lite' mode (non-@Configuration class), Spring does not proxy the class. Inter-bean method calls create new instances instead of reusing singletons, silently breaking the expected singleton contract."
+    severity: HIGH
+    category: SPRING_BOOT
+    tags: [spring, configuration, bean, singleton, proxy]
+    enabled: true
+    recommendation: "Move @Bean methods to a dedicated class annotated with @Configuration."
+
+  SPRING017:
+    analyzer: http-session-in-rest-controller
+    title: "HttpSession in REST Controller"
+    description: "Detects @RestController classes that inject or accept HttpSession."
+    rationale: "REST APIs must be stateless. Using HttpSession couples the service to sticky sessions, breaks horizontal scaling, and is incompatible with token-based authentication."
+    severity: HIGH
+    category: SPRING_BOOT
+    tags: [spring, rest, stateless, session, scalability]
+    enabled: true
+    recommendation: "Use JWT or OAuth2 tokens for authentication state and remove HttpSession from REST controllers."
+
+  # ---------------------------------------------------------------------------
+  # Clean Architecture rules
+  # ---------------------------------------------------------------------------
+
+  CLEAN001:
+    analyzer: anemic-domain-model
+    title: "Anemic Domain Model"
+    description: "Detects domain package classes whose public methods are exclusively getters and setters."
+    rationale: "Pure data classes in the domain layer scatter business rules across services, violating encapsulation and making the model harder to reason about."
+    severity: MEDIUM
+    category: CLEAN_ARCHITECTURE
+    tags: [clean-arch, domain, encapsulation, ddd]
+    enabled: true
+    recommendation: "Enrich the domain model by moving business logic that operates on the class's state into the class itself."
+    parameters:
+      minFields: 3
+      minMethods: 2
+
+  CLEAN002:
+    analyzer: domain-depends-on-framework
+    title: "Domain Layer Depends on Framework"
+    description: "Detects classes in domain/model packages that import Spring, JPA, Hibernate, or Servlet classes."
+    rationale: "Coupling domain objects to infrastructure frameworks makes it impossible to run and test the domain outside a container, and entangles business logic with persistence concerns."
+    severity: HIGH
+    category: CLEAN_ARCHITECTURE
+    tags: [clean-arch, domain, coupling, ddd, hexagonal]
+    enabled: true
+    recommendation: "Remove framework imports from domain classes. Define repository interfaces in the domain layer and implement them in the infrastructure layer."
+
+  CLEAN003:
+    analyzer: service-without-interface
+    title: "Service Without Business Interface"
+    description: "Detects @Service classes that implement no business interface."
+    rationale: "Services without interfaces are tightly coupled to callers, cannot be swapped, are harder to mock in unit tests, and violate the Dependency Inversion Principle."
+    severity: MEDIUM
+    category: CLEAN_ARCHITECTURE
+    tags: [clean-arch, di, testability, dip]
+    enabled: true
+    recommendation: "Extract a business interface (Port) and inject that interface in callers instead of the concrete service class."
+
+  CLEAN004:
+    analyzer: service-layer-calling-controller
+    title: "Service Layer Importing Presentation Layer"
+    description: "Detects service/application/use-case classes that import from controller or web packages."
+    rationale: "The service layer must be independent of presentation concerns. Importing from controller packages inverts the dependency direction and prevents reuse outside a web context."
+    severity: HIGH
+    category: CLEAN_ARCHITECTURE
+    tags: [clean-arch, layering, dependency-direction, hexagonal]
+    enabled: true
+    recommendation: "Remove all presentation-layer imports from the service layer. Use events or output-port interfaces if cross-layer communication is needed."
+
+  # ---------------------------------------------------------------------------
+  # REST API Design rules
+  # ---------------------------------------------------------------------------
+
+  REST001:
+    analyzer: endpoint-missing-response-entity
+    title: "Endpoint Not Returning ResponseEntity"
+    description: "Detects @RestController endpoint methods that return raw objects instead of ResponseEntity."
+    rationale: "Without ResponseEntity, HTTP status codes and headers cannot be controlled. The framework defaults to 200 OK regardless of the operation's outcome."
+    severity: LOW
+    category: REST_API
+    tags: [rest, http-status, api-design, response-entity]
+    enabled: true
+    recommendation: "Wrap the return type in ResponseEntity<T> to control status codes, headers, and conditional responses."
+
+  REST002:
+    analyzer: large-controller
+    title: "Large REST Controller"
+    description: "Detects @RestController classes that expose more endpoints than the configured threshold."
+    rationale: "A controller with many endpoints often handles multiple resources, violating SRP and making it hard to maintain, test, and understand."
+    severity: MEDIUM
+    category: REST_API
+    tags: [rest, srp, api-design, maintainability]
+    enabled: true
+    recommendation: "Split into smaller controllers — one per domain resource (e.g., OrderController, ShipmentController)."
+    parameters:
+      maxEndpoints: 15
+
+  REST003:
+    analyzer: controller-method-without-mapping
+    title: "Public Controller Method Without HTTP Mapping"
+    description: "Detects public methods in @RestController classes that carry no HTTP mapping or lifecycle annotation."
+    rationale: "Non-endpoint public methods in a controller pollute the presentation-layer API and expose business logic in the wrong layer."
+    severity: LOW
+    category: REST_API
+    tags: [rest, api-design, layering]
+    enabled: true
+    recommendation: "Move non-endpoint public methods to a @Service class. Controllers should contain only endpoint handlers and @ExceptionHandler methods."
+
+  # ---------------------------------------------------------------------------
+  # Dependency Injection rules
+  # ---------------------------------------------------------------------------
+
+  DI001:
+    analyzer: application-context-direct-usage
+    title: "Direct ApplicationContext Usage"
+    description: "Detects Spring beans that inject ApplicationContext or BeanFactory directly."
+    rationale: "Using ApplicationContext.getBean() is the Service Locator anti-pattern. It hides real dependencies, couples code to the Spring container, and prevents unit testing without a full context."
+    severity: HIGH
+    category: DEPENDENCY_INJECTION
+    tags: [di, service-locator, testability, anti-pattern]
+    enabled: true
+    recommendation: "Declare the exact beans you need as constructor parameters instead of pulling them from the context."
+
+  DI002:
+    analyzer: lazy-injection-detected
+    title: "@Lazy Injection Detected"
+    description: "Detects @Lazy on injected fields in Spring beans."
+    rationale: "@Lazy is almost always a workaround for a circular dependency. It defers proxy creation and can cause unexpected initialisation-order bugs or NullPointerExceptions at first use."
+    severity: HIGH
+    category: DEPENDENCY_INJECTION
+    tags: [di, circular-dependency, lazy, anti-pattern]
+    enabled: true
+    recommendation: "Break the circular dependency by introducing an interface, an event, or a third bean instead of using @Lazy as a shortcut."
+
+  DI003:
+    analyzer: optional-dependency-injection
+    title: "Optional Dependency Injection"
+    description: "Detects injected fields of type Optional<T> in Spring beans."
+    rationale: "Injecting Optional<T> makes the dependency contract ambiguous and leads to scattered Optional.isPresent() checks. Optional was not designed to be a field type."
+    severity: MEDIUM
+    category: DEPENDENCY_INJECTION
+    tags: [di, optional, api-design]
+    enabled: true
+    recommendation: "Use @Autowired(required = false) with a single null-check in one place, or provide a default no-op @Bean with @ConditionalOnMissingBean so the dependency is always satisfied."

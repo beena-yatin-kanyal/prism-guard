@@ -1,0 +1,32 @@
+#!/bin/bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+JAR="$SCRIPT_DIR/prism-guard-cli/target/prism-guard-cli-1.0.0.jar"
+
+if [ ! -f "$JAR" ]; then
+  echo "Error: JAR not found at $JAR"
+  echo "Run 'mvn clean package -DskipTests' first."
+  exit 2
+fi
+
+# Default format for the analyze subcommand.
+# Override by passing --format=<value> explicitly.
+DEFAULT_FORMAT="html"
+
+# If the first argument is 'analyze' and no --format/-f flag is present,
+# inject the default format automatically.
+if [ "$1" = "analyze" ]; then
+  has_format=false
+  for arg in "$@"; do
+    case "$arg" in
+      --format*|-f*) has_format=true; break ;;
+    esac
+  done
+
+  if [ "$has_format" = false ]; then
+    shift  # remove 'analyze'
+    exec java --enable-native-access=ALL-UNNAMED -jar "$JAR" \
+      analyze --format="$DEFAULT_FORMAT" "$@"
+  fi
+fi
+
+exec java --enable-native-access=ALL-UNNAMED -jar "$JAR" "$@"

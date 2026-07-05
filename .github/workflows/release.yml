@@ -1,0 +1,185 @@
+# =============================================================================
+# Prism Guard — Release Workflow
+#
+# Builds the fat CLI JAR and publishes a GitHub Release with the JAR as an
+# asset.  Triggered manually; only runs on the main branch.
+#
+# Inputs
+# ------
+# version_override  Optional semver string (e.g. "1.2.0").  When blank the
+#                   version declared in the root pom.xml is used.
+# release_notes     Free-form text that appears in the GitHub Release body.
+# draft             When true the release is created as a draft for review
+#                   before it is made public.
+#
+# Extending for Maven Central
+# ---------------------------
+# Add a "deploy" job that depends on "release" and runs:
+#   mvn --no-transfer-progress deploy -P release -DskipTests
+# with OSSRH credentials stored as repository secrets.
+# =============================================================================
+
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_override:
+        description: "Release version — leave blank to read from pom.xml"
+        required: false
+        default: ""
+      release_notes:
+        description: "Release notes / changelog excerpt (optional)"
+        required: false
+        default: ""
+      draft:
+        description: "Create as a draft release (review before publishing)"
+        type: boolean
+        required: false
+        default: false
+
+# --------------------------------------------------------------------------- #
+# Minimum permissions: read the repo, write releases and release assets.      #
+# No additional scopes are granted.                                            #
+# --------------------------------------------------------------------------- #
+permissions:
+  contents: write  # required to create a GitHub Release and upload assets
+
+# Prevent concurrent releases from racing against each other.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+
+    # Guard: only allow releases from the main branch.
+    # Fails fast if the workflow is mistakenly triggered from a feature branch.
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      # -------------------------------------------------------------------
+      # 1. Checkout
+      # -------------------------------------------------------------------
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history so git describe works if needed later
+
+      # -------------------------------------------------------------------
+      # 2. Set up Java 21 (LTS) with built-in Maven dependency cache
+      # -------------------------------------------------------------------
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"       # Eclipse Temurin — stable, reproducible
+          cache: "maven"                # caches ~/.m2/repository automatically
+
+      # -------------------------------------------------------------------
+      # 3. Resolve the release version
+      #    Priority: workflow input > pom.xml
+      # -------------------------------------------------------------------
+      - name: Resolve release version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version_override }}" ]; then
+            VERSION="${{ inputs.version_override }}"
+            echo "Using version override: $VERSION"
+          else
+            # Extract version from the root pom.xml without starting a full
+            # Maven lifecycle.  -q suppresses download progress output.
+            VERSION=$(mvn -q -f pom.xml help:evaluate \
+              -Dexpression=project.version \
+              -DforceStdout)
+            echo "Using version from pom.xml: $VERSION"
+          fi
+
+          # Validate that the version string is non-empty and looks reasonable.
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not determine release version."
+            exit 1
+          fi
+
+          echo "version=$VERSION"             >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION"                >> "$GITHUB_OUTPUT"
+          echo "jar_name=prism-guard-cli-${VERSION}.jar" >> "$GITHUB_OUTPUT"
+
+      # -------------------------------------------------------------------
+      # 4. (Optional) bump pom.xml when version_override is supplied
+      #    This keeps the pom in sync when a manual version is given.
+      # -------------------------------------------------------------------
+      - name: Align pom.xml version (override only)
+        if: inputs.version_override != ''
+        run: |
+          mvn --no-transfer-progress versions:set \
+            -DnewVersion="${{ steps.version.outputs.version }}" \
+            -DgenerateBackupPoms=false
+
+      # -------------------------------------------------------------------
+      # 5. Build — only the CLI module and its required upstream modules.
+      #    Tests are skipped (no test suite wired into the release pipeline
+      #    yet; add -DskipTests=false once CI tests are in place).
+      # -------------------------------------------------------------------
+      - name: Build fat JAR
+        run: |
+          mvn --no-transfer-progress clean package \
+            -pl prism-guard-cli -am \
+            -DskipTests \
+            -Dmaven.test.skip=true
+
+      # -------------------------------------------------------------------
+      # 6. Verify the JAR was produced before attempting upload.
+      # -------------------------------------------------------------------
+      - name: Verify JAR exists
+        run: |
+          JAR="prism-guard-cli/target/${{ steps.version.outputs.jar_name }}"
+          if [ ! -f "$JAR" ]; then
+            echo "::error::Expected JAR not found at $JAR"
+            ls -lh prism-guard-cli/target/ || true
+            exit 1
+          fi
+          echo "JAR produced: $(du -sh "$JAR" | cut -f1)  — $JAR"
+
+      # -------------------------------------------------------------------
+      # 7. Create GitHub Release and attach the JAR as an asset.
+      #    softprops/action-gh-release is the de-facto standard for this;
+      #    it handles tag creation, release creation, and asset upload in
+      #    a single step using the GITHUB_TOKEN supplied automatically.
+      # -------------------------------------------------------------------
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name:   ${{ steps.version.outputs.tag }}
+          name:       "Prism Guard ${{ steps.version.outputs.version }}"
+          draft:      ${{ inputs.draft }}
+          prerelease: false
+          body: |
+            ## Prism Guard ${{ steps.version.outputs.version }}
+
+            ${{ inputs.release_notes != '' && inputs.release_notes || '_No release notes provided._' }}
+
+            ---
+
+            ### Installation
+
+            ```bash
+            java --enable-native-access=ALL-UNNAMED \
+              -jar prism-guard-cli-${{ steps.version.outputs.version }}.jar \
+              analyze /path/to/project
+            ```
+
+            **Requirements:** Java 21+
+
+            ### What's included
+
+            | Asset | Description |
+            |-------|-------------|
+            | `${{ steps.version.outputs.jar_name }}` | Self-contained executable JAR (all dependencies bundled) |
+
+          files: |
+            prism-guard-cli/target/${{ steps.version.outputs.jar_name }}
+          fail_on_unmatched_files: true
+          generate_release_notes: true   # appends auto-generated PR/commit notes
