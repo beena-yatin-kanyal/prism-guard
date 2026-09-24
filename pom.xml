@@ -33,7 +33,7 @@
         <javaparser-core.version>3.26.2</javaparser-core.version>
         <picocli.version>4.7.6</picocli.version>
         <jansi.version>2.4.1</jansi.version>
-        <freemarker.version>2.3.33</freemarker.version>
+        <freemarker.version>2.3.35</freemarker.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
         <guava.version>33.3.0-jre</guava.version>
     </properties>
